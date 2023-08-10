@@ -80,17 +80,18 @@ class Rectangle(object):
     def __contains__(self, point):
         return self.__poi_in_rectangle(
             point.longitude, point.latitude,
-            self.__ltp.latitude, self.__ltp.longitude,
-            self.__rbp.latitude, self.__rbp.longitude,
+            self.__ltp.longitude, self.__ltp.latitude,
+            self.__rbp.longitude, self.__rbp.latitude,
         )
 
     @staticmethod
-    def __poi_in_rectangle(longitude, latitude, max_latitude, min_longitude, min_latitude, max_longitude):
+    def __poi_in_rectangle(longitude, latitude, min_longitude, max_latitude, max_longitude, min_latitude):
         if min_latitude <= latitude <= max_latitude:
             if min_longitude * max_longitude > 0:
                 if min_longitude <= longitude <= max_longitude:
                     return True
             else:
+                # 跨半球
                 if (abs(min_longitude) + abs(max_longitude)) < MAX_LNG:
                     if min_longitude <= longitude <= max_longitude:
                         return True
@@ -174,11 +175,16 @@ class Polygon(object):
 
 
 class FenceRTree(object):
+    """R-tree for geography fence"""
+    earth_rectangle = Rectangle(Point(-180, 90), Point(180, -90))
 
     def __init__(self):
-        self.db = None  # R树
+        self.db = {
+            'rectangle': self.earth_rectangle,  # root circumscribed rectangle in earth
+            'areas': []  # sub areas in circumscribed rectangle
+        }  # R-tree
 
-    def update(self, fences):
+    def build(self, fences):
         self.db = {}
         self.__init_root_circumscribed_rectangle(fences)
         self.__init_fence_circumscribed_rectangle_tree(fences, line_num=16)
@@ -299,20 +305,31 @@ class FenceRTree(object):
 
 
 class GeoFence(object):
+    """geography fence with R-tree"""
 
     def __init__(self):
         self.fences = {}
-        self.tree = FenceRTree()
+        self.rtree = FenceRTree()
 
     def update(self, data):
+        """update fence data
+
+        @data: dict, {"fence_id", <fence_object>, ...}
+        """
         self.fences.update(data)
 
     def build(self):
-        self.tree.update(self.fences)
+        """build R tree according fence data"""
+        self.rtree.build(self.fences)
 
     def check_point_in_fences(self, point):
+        """check if point in fences
+
+        @point: Point
+        return dict, {"fence_id": <fence object>, ...}, point in fences
+        """
         fences = {}
-        fence_ids = self.tree.check_point_in_tree(point)
+        fence_ids = self.rtree.check_point_in_tree(point)
         for fence_id in fence_ids:
             if point in self.fences[fence_id]:
                 fences.update({fence_id: self.fences[fence_id]})
@@ -362,7 +379,7 @@ def test():
     print('=======')
     print('fences: ', gf.fences)
     print('=======')
-    print('tree data: ', gf.tree.db)
+    print('tree data: ', gf.rtree.db)
 
 
 if __name__ == '__main__':
