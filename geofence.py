@@ -91,11 +91,12 @@ class Rectangle(object):
                 if min_longitude <= longitude <= max_longitude:
                     return True
             else:
-                # 跨半球
                 if (abs(min_longitude) + abs(max_longitude)) < MAX_LNG:
+                    # 跨0度经线
                     if min_longitude <= longitude <= max_longitude:
                         return True
                 else:
+                    # 跨+/-180度经线
                     left = max(min_longitude, max_longitude)
                     right = min(min_longitude, max_longitude)
                     if left <= longitude <= MAX_LNG or right <= longitude <= -MAX_LNG:
@@ -176,13 +177,9 @@ class Polygon(object):
 
 class FenceRTree(object):
     """R-tree for geography fence"""
-    earth_rectangle = Rectangle(Point(-180, 90), Point(180, -90))
 
     def __init__(self):
-        self.db = {
-            'rectangle': self.earth_rectangle,  # root circumscribed rectangle in earth
-            'areas': []  # sub areas in circumscribed rectangle
-        }  # R-tree
+        self.db = {}  # R-tree database
 
     def build(self, fences):
         self.db = {}
@@ -383,4 +380,7 @@ def test():
 
 
 if __name__ == '__main__':
-    test()
+    # test()
+    earth_rectangle = Rectangle(Point(-180, 90), Point(180, -90))
+    p = Point(180, 30)
+    print(p in earth_rectangle)
