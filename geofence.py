@@ -380,7 +380,4 @@ def test():
 
 
 if __name__ == '__main__':
-    # test()
-    earth_rectangle = Rectangle(Point(-180, 90), Point(180, -90))
-    p = Point(180, 30)
-    print(p in earth_rectangle)
+    test()
